@@ -31,13 +31,14 @@ public final class JsonAdapter {
      * @param function Função usada para alterar o dados identificado no target.
      * @return Retorna um novo json com o dado alterado. Em casos de erro ou caso não seja identificado, o mesmo json de origem será retornado.
      */
-    public static String adapterSingleValue(String json, final String target, final Function<Object, Object> function) {
+    public static String adapterSingleValue(String json, final String target, final Function<String, String> function) {
         try {
             var map = MAPPER.readValue(json, Map.class);
 
-            if (map.containsKey(target)) {
-                final var valueByFunction = function.apply(map.get(target));
-                map.replace(target, valueByFunction);
+            var replaceValueExecutor = ReplaceValue.createNewInstance(target, map)
+                    .replaceByFunction(function);
+
+            if (replaceValueExecutor.wasReplaced()) {
                 return MAPPER.writeValueAsString(map);
             }
 
@@ -67,10 +68,9 @@ public final class JsonAdapter {
      * Basta fornecer uma nova function a cada chamada.
      */
     public JsonAdapter adapterByFunction(final String target, final Function<Object, Object> function) {
-        if (this.readValues.containsKey(target)) {
-            final var valueByFunction = function.apply(this.readValues.get(target));
-            this.readValues.replace(target, valueByFunction);
-        }
+        ReplaceValue.createNewInstance(target, this.readValues)
+                .replaceByFunction(function);
+
         return this;
     }
 
@@ -86,9 +86,9 @@ public final class JsonAdapter {
      * @param maxSize Parâmetro usado para definir a quantidade máxima de caracteres
      * @return Retorna uma Function que modifica a string conforme a quantidade de caracteres recebida como parâmetro
      */
-    public static Function<Object, Object> functionMaxSizeAccepted(int maxSize) {
+    public static Function<String, String> functionMaxSizeAccepted(int maxSize) {
         final var initPosition = 0;
         final var endPosition = Math.max(maxSize, 1);
-        return o -> o.toString().substring(initPosition, endPosition);
+        return o -> o.substring(initPosition, endPosition);
     }
 }
